@@ -23,3 +23,11 @@ Alternatively you can use the [Spring Boot Maven plugin](https://docs.spring.io/
 mvn spring-boot:run
 ```
 
+## Testing the Application
+
+- 1 Start the application
+- 2 Open any API testing tool of your choice e.g. Postman/Isomnia
+- 3 Select POST as HTTP method and enter URL as - http://localhost:5000/short?url=https://stash.backbase.com/projects/PO/repos/payment-order-integration-spec/browse/src/main/resources/schemas/definitions.json
+- 4 Hit Send
+- 5 The output should be generated as http://localhost:5000/long?tiny=Yw==
+- 6 Copy the above output from #5 and rerun the step 3-5 

@@ -1,7 +1,9 @@
 package com.tinyurl.app.controller;
 
-import com.tinyurl.app.model.TinyURL;
-import com.tinyurl.app.utils.TinyURLUtils;
+import com.tinyurl.app.service.TinyURLService;
+import com.tinyurl.app.utils.StringUtilities;
+import com.tinyurl.app.utils.URLUtils;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -12,8 +14,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * This is an main controller class for Tiny URL interview question.
@@ -23,40 +23,47 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Chandrakant
  */
 @RestController("URLControllerV1")
+@RequiredArgsConstructor
 public class TinyURLController {
 
     private static final Logger logger = LoggerFactory.getLogger(TinyURLController.class);
-    private Map<String, String> urlMap = new ConcurrentHashMap<>();
+    private final TinyURLService urlService;
 
     /**
      * Method to create a tiny URL from the long URL provided in the URL path
-     *
      * @param url request param
+     * @param request servlet request
      * @return ResponseEntity of success or Failure
      */
     @PostMapping("/short")
     public ResponseEntity<String> createTinyURL(@RequestParam("url") String url, HttpServletRequest request) {
 
         // Check if the URL is valid
-        if (!TinyURLUtils.isURLValid(url)) {
+        if(URLUtils.isURLValid(url)) {
             return new ResponseEntity<>("Unable to create URL for now. Please try again later.", HttpStatus.BAD_REQUEST);
         }
-
-        final TinyURL urlObj = TinyURL.create(url);
-        logger.info("URL id generated = {}", urlObj.getId());
-        urlMap.put(urlObj.getId(),url);
-        // Return the generated id
-        return new ResponseEntity<>(request.getRequestURL().toString().replace("short","long?tiny=".concat(urlObj.getId())), HttpStatus.OK);
+        // Call the method to process the request and create a tiny URL
+        String tinyURL  = urlService.getTinyURL(url);
+        // Return the tiny URL created back to the caller.
+        return new ResponseEntity<>(request.getRequestURL().toString().replace("short","long?tiny=".concat(tinyURL)), HttpStatus.OK);
     }
 
     /**
-     * Retrieve the original URL from the hash code tiny url.
+     * This method is responsible for retrieving the full URL from the DB.
+     * If there is an error then returns the error back to the caller or else
+     * returns the successfully created URL back to the caller.
+     *
      * @param tiny
      * @return
      */
     @GetMapping(value = "/long")
     public ResponseEntity<String> getOriginalURLFromTiny(@RequestParam String tiny) {
-        String urlRetrieved = urlMap.get(tiny);
-        return new ResponseEntity<>(urlRetrieved, HttpStatus.OK);
+
+        // validate if url param tiny is not empty.
+        if(StringUtilities.isEmptyOnTrim(tiny)){
+            logger.error("Error retrieving the URL from DB");
+            return new ResponseEntity<>("URL not found in DB", HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(urlService.getFullUrlFrom(tiny),HttpStatus.OK);
     }
 }
