@@ -19,3 +19,9 @@ spring:
       ddl-auto: update
 server:
   port: 5000
+
+app:
+  url:
+    expiry: 30
+  schedule:
+    time: PT30M

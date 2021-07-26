@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 /**
  * This service class is responsible to perform the service related interaction with the
@@ -33,11 +34,11 @@ public class TinyURLService {
      * @param urlToShorten input url
      * @return url
      */
-    public String getTinyURL(String urlToShorten) {
+    public String getTinyURL(String urlToShorten, String urlExpiryTime) {
         TinyURL url = new TinyURL();
         url.setUrl(URLUtils.encode(urlToShorten));
         url.setCreationDate(new Date());
-        url.setExpiryDate(new Date(System.currentTimeMillis()));
+        url.setExpiryDate(new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(Long.parseLong(urlExpiryTime))));
         TinyURL save = urlRepository.save(url);
 
         return baseComponent.encode(save.getId());
@@ -57,7 +58,7 @@ public class TinyURLService {
      * @param shortUrl
      * @return
      */
-    public String getFullUrlFrom(String shortUrl) {
+    public String getFullUrlFrom(String shortUrl, String urlExpiryTime) {
         long id = baseComponent.decode(shortUrl);
         Optional<TinyURL> optionalEntity = urlRepository.findById(id);
 
@@ -65,9 +66,26 @@ public class TinyURLService {
             return "URL not found in DB";
         }
         TinyURL entity = optionalEntity.get();
-        urlRepository.save(entity);
-
+        if (isEntityActive(entity)) {
+            entity.setExpiryDate(new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(Long.parseLong(urlExpiryTime))));
+            urlRepository.save(entity);
+        } else {
+            urlRepository.delete(entity);
+            return "URL is expired!";
+        }
         return URLUtils.decode(entity.getUrl());
+    }
+
+    /**
+     * Check to see if the current row is expired based on the current date
+     *
+     * @param entity
+     * @return
+     */
+    private boolean isEntityActive(TinyURL entity) {
+        return entity.getExpiryDate() != null &&
+                entity.getExpiryDate().after(new Date(System.currentTimeMillis())) ||
+                entity.getExpiryDate().equals(new Date(System.currentTimeMillis()));
     }
 
     /**

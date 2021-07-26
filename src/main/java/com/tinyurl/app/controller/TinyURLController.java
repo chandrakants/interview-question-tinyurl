@@ -6,6 +6,7 @@ import com.tinyurl.app.utils.URLUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,6 +30,9 @@ public class TinyURLController {
     private static final Logger logger = LoggerFactory.getLogger(TinyURLController.class);
     private final TinyURLService urlService;
 
+    @Value("${app.url.expiry}")
+    public String expiry;
+
     /**
      * Method to create a tiny URL from the long URL provided in the URL path
      * @param url request param
@@ -39,11 +43,11 @@ public class TinyURLController {
     public ResponseEntity<String> createTinyURL(@RequestParam("url") String url, HttpServletRequest request) {
 
         // Check if the URL is valid
-        if(URLUtils.isURLValid(url)) {
+        if(URLUtils.isURLValid(url) || StringUtilities.isEmpty(url)) {
             return new ResponseEntity<>("Unable to create URL for now. Please try again later.", HttpStatus.BAD_REQUEST);
         }
         // Call the method to process the request and create a tiny URL
-        String tinyURL  = urlService.getTinyURL(url);
+        String tinyURL  = urlService.getTinyURL(url, expiry);
         // Return the tiny URL created back to the caller.
         return new ResponseEntity<>(request.getRequestURL().toString().replace("short","long?tiny=".concat(tinyURL)), HttpStatus.OK);
     }
@@ -64,6 +68,6 @@ public class TinyURLController {
             logger.error("Error retrieving the URL from DB");
             return new ResponseEntity<>("URL not found in DB", HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>(urlService.getFullUrlFrom(tiny),HttpStatus.OK);
+        return new ResponseEntity<>(urlService.getFullUrlFrom(tiny, expiry),HttpStatus.OK);
     }
 }

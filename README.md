@@ -31,3 +31,9 @@ mvn spring-boot:run
 - 4 Hit Send
 - 5 The output should be generated as http://localhost:5000/long?tiny=Yw==
 - 6 Copy the above output from #5 and rerun the step 3-5 
+
+## Scheduler
+- The task scheduler runs every 30 minutes and deletes the records which are not accessed in last 30 minutes.
+
+## Unit Testing
+- Added Unit and Integration test cases in test folder.
